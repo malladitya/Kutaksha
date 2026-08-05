@@ -9,20 +9,20 @@ export function AlertBanner({ alerts }) {
   return (
     <div className="space-y-2">
       {critical.map((a, i) => (
-        <div key={`c-${i}`} className="flex items-start gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4">
+        <div key={`c-${i}`} className="flex items-start gap-3 rounded-2xl border border-rose-300 bg-[linear-gradient(135deg,rgba(255,241,242,0.95),rgba(254,226,226,0.98))] p-4 shadow-sm">
           <span className="mt-0.5 text-lg">🚨</span>
           <div>
-            <p className="text-sm font-semibold text-rose-800">Critical Alert — {a.label}</p>
-            <p className="mt-1 text-xs text-rose-700">{a.message}</p>
+            <p className="text-sm font-semibold text-rose-900">Critical Alert — {a.label}</p>
+            <p className="mt-1 text-xs text-rose-800">{a.message}</p>
           </div>
         </div>
       ))}
       {warnings.map((a, i) => (
-        <div key={`w-${i}`} className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+        <div key={`w-${i}`} className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-[linear-gradient(135deg,rgba(255,251,235,0.96),rgba(254,243,199,0.97))] p-4 shadow-sm">
           <span className="mt-0.5 text-lg">⚠️</span>
           <div>
-            <p className="text-sm font-semibold text-amber-800">{a.severity === 'warning' ? 'Warning' : 'Caution'} — {a.label}</p>
-            <p className="mt-1 text-xs text-amber-700">{a.message}</p>
+            <p className="text-sm font-semibold text-amber-900">{a.severity === 'warning' ? 'Warning' : 'Caution'} — {a.label}</p>
+            <p className="mt-1 text-xs text-amber-800">{a.message}</p>
           </div>
         </div>
       ))}
@@ -34,15 +34,15 @@ export function MetricsTable({ current, baseline }) {
   const keys = Object.keys(METRIC_LABELS);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <table className="w-full text-left text-xs">
-        <thead className="bg-slate-100 text-slate-700">
+        <thead className="bg-slate-900 text-slate-100">
           <tr>
-            <th className="px-3 py-2.5">Metric</th>
-            <th className="px-3 py-2.5">Baseline</th>
-            <th className="px-3 py-2.5">Current</th>
-            <th className="px-3 py-2.5">Delta</th>
-            <th className="px-3 py-2.5">Status</th>
+            <th className="px-3 py-2.5 font-semibold">Metric</th>
+            <th className="px-3 py-2.5 font-semibold">Baseline</th>
+            <th className="px-3 py-2.5 font-semibold">Current</th>
+            <th className="px-3 py-2.5 font-semibold">Delta</th>
+            <th className="px-3 py-2.5 font-semibold">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -52,7 +52,6 @@ export function MetricsTable({ current, baseline }) {
             const base = baseline[key];
             const change = metricChange(curr, base);
             const dev = Math.abs(change);
-            const isBad = key === 'sitting_minutes' || key === 'tremor_index' ? change > 0 : change < 0;
             const status = dev >= 40 ? 'critical' : dev >= 20 ? 'warning' : 'normal';
 
             return (
@@ -83,24 +82,24 @@ export function ScoreCards({ current, baseline }) {
   const severity = severityFromCurrent(current, baseline);
 
   return (
-    <div className="grid grid-cols-4 gap-3">
-      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-sky-50 to-white p-4 text-center">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">HSI</p>
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="rounded-2xl border border-sky-200 bg-[linear-gradient(135deg,rgba(239,246,255,0.98),rgba(255,255,255,1))] p-4 text-center shadow-sm">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">HSI</p>
         <p className="mt-1 text-2xl font-bold text-sky-700">{hsi}</p>
         <p className="text-[10px] text-slate-500">Health Stability</p>
       </div>
-      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-rose-50 to-white p-4 text-center">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Risk</p>
+      <div className="rounded-2xl border border-rose-200 bg-[linear-gradient(135deg,rgba(255,241,242,0.98),rgba(255,255,255,1))] p-4 text-center shadow-sm">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Risk</p>
         <p className="mt-1 text-2xl font-bold text-rose-700">{risk}%</p>
         <p className="text-[10px] text-slate-500">Risk Score</p>
       </div>
-      <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 text-center">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Severity</p>
+      <div className="rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(255,255,255,1))] p-4 text-center shadow-sm">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Severity</p>
         <p className="mt-1 text-2xl font-bold text-amber-700">{severity}</p>
         <p className="text-[10px] text-slate-500">AI Severity Index</p>
       </div>
-      <div className={`rounded-xl border p-4 text-center ${risk >= 70 ? 'border-rose-300 bg-rose-50' : risk >= 40 ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}`}>
-        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Level</p>
+      <div className={`rounded-2xl border p-4 text-center shadow-sm ${risk >= 70 ? 'border-rose-300 bg-rose-50' : risk >= 40 ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}`}>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Level</p>
         <p className="mt-1 text-2xl font-bold">{riskLabel(risk)}</p>
         <p className="text-[10px] text-slate-500">Assessment</p>
       </div>
