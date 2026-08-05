@@ -16,8 +16,8 @@ const DEMO_USERS = [
 
 const DEMO_PATIENTS = [
   { id: 'p1', name: 'Rajesh Kumar', age: 72, condition: 'Mild mobility decline', caretakerId: 'u2', doctorId: 'u3', baseline: { ...DEFAULT_BASELINE } },
-  { id: 'p2', name: 'Lakshmi Devi', age: 68, condition: 'Post-stroke recovery', caretakerId: null, doctorId: 'u3', baseline: { walking_speed: 0.95, activity_level: 65, sitting_minutes: 72, balance_score: 62, tremor_index: 18, gait_rhythm: 70, heart_rate_var: 38 } },
-  { id: 'p3', name: 'Suresh Patel', age: 75, condition: 'Parkinson\'s monitoring', caretakerId: null, doctorId: 'u3', baseline: { walking_speed: 0.88, activity_level: 58, sitting_minutes: 85, balance_score: 55, tremor_index: 28, gait_rhythm: 62, heart_rate_var: 32 } },
+  { id: 'p2', name: 'Lakshmi Devi', age: 68, condition: 'Post-stroke recovery', caretakerId: null, doctorId: 'u3', baseline: { walking_speed: 0.95, activity_level: 65, sitting_minutes: 72, balance_score: 62, tremor_index: 18, gait_rhythm: 70 } },
+  { id: 'p3', name: 'Suresh Patel', age: 75, condition: 'Parkinson\'s monitoring', caretakerId: null, doctorId: 'u3', baseline: { walking_speed: 0.88, activity_level: 58, sitting_minutes: 85, balance_score: 55, tremor_index: 28, gait_rhythm: 62 } },
 ];
 
 function read(key, fallback) {
@@ -36,8 +36,10 @@ function write(key, value) {
 export function initStorage() {
   if (!read(KEYS.USERS)) write(KEYS.USERS, DEMO_USERS);
   if (!read(KEYS.PATIENTS)) write(KEYS.PATIENTS, DEMO_PATIENTS);
-  if (!read(KEYS.METRICS)) write(KEYS.METRICS, {});
-  if (!read(KEYS.ALERTS)) write(KEYS.ALERTS, []);
+
+  // Keep the demo session clean so stale simulation data is not replayed on refresh.
+  write(KEYS.METRICS, {});
+  write(KEYS.ALERTS, []);
 }
 
 export function login(email, password) {

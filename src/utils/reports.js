@@ -5,6 +5,7 @@ export function generateReport(patient, current, baseline, history, alerts, gene
   const risk = riskFromCurrent(current, baseline);
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const trend = history.length > 1 ? hsiFromCurrent(history[history.length - 1], history[0]) : hsi;
 
   let report = '';
   report += '═══════════════════════════════════════════════════════════\n';
@@ -23,7 +24,8 @@ export function generateReport(patient, current, baseline, history, alerts, gene
   report += '── HEALTH SUMMARY ───────────────────────────────────────\n';
   report += `Health Stability Index (HSI): ${hsi}/100\n`;
   report += `Risk Score: ${risk}%\n`;
-  report += `Risk Level: ${riskLabel(risk)}\n\n`;
+  report += `Risk Level: ${riskLabel(risk)}\n`;
+  report += `Trend Direction: ${trend >= 70 ? 'Stable' : trend >= 50 ? 'Watch' : 'Declining'}\n\n`;
 
   report += '── METRICS vs BASELINE ──────────────────────────────────\n';
   report += `${'Metric'.padEnd(25)} ${'Baseline'.padStart(10)} ${'Current'.padStart(10)} ${'Change'.padStart(10)} ${'Status'.padStart(10)}\n`;
@@ -102,11 +104,11 @@ export function downloadReport(patient, current, baseline, history, generatedBy)
 }
 
 export function downloadCSV(patient, history, baseline) {
-  const headers = ['timestamp', 'walking_speed', 'activity_level', 'sitting_minutes', 'balance_score', 'tremor_index', 'gait_rhythm', 'heart_rate_var', 'hsi', 'risk'];
+  const headers = ['timestamp', 'walking_speed', 'activity_level', 'sitting_minutes', 'balance_score', 'tremor_index', 'gait_rhythm', 'posture_stability', 'step_stride', 'fatigue_index', 'movement_variability', 'hsi', 'risk'];
   const rows = history.map((h) => {
     const hsi = hsiFromCurrent(h, baseline);
     const risk = riskFromCurrent(h, baseline);
-    return [new Date(h.timestamp).toISOString(), h.walking_speed, h.activity_level, h.sitting_minutes, h.balance_score, h.tremor_index, h.gait_rhythm, h.heart_rate_var, hsi, risk].join(',');
+    return [new Date(h.timestamp).toISOString(), h.walking_speed, h.activity_level, h.sitting_minutes, h.balance_score, h.tremor_index, h.gait_rhythm, h.posture_stability ?? baseline.posture_stability, h.step_stride ?? baseline.step_stride, h.fatigue_index ?? baseline.fatigue_index, h.movement_variability ?? baseline.movement_variability, hsi, risk].join(',');
   });
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });

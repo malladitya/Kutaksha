@@ -45,10 +45,10 @@ export default function CaretakerDashboard() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8 xl:px-10">
-      <section className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-amber-600">Caretaker Dashboard</p>
+            <p className="text-[11px] uppercase tracking-[0.32em] text-amber-700">Caretaker Dashboard</p>
             <h2 className="mt-1 text-2xl font-semibold text-slate-900">Monitoring — {patient?.name}</h2>
             <p className="mt-1 text-xs text-slate-500">Alerts trigger when any metric deviates ≥20% from baseline</p>
           </div>

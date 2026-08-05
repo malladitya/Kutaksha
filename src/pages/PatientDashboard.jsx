@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import CameraTracker from '../components/CameraTracker';
 import { HsiRiskChart, MultiMetricGrid, buildTrendData } from '../components/LiveCharts';
 import { ScoreCards, MetricsTable, InsightPanel, AlertBanner } from '../components/DashboardWidgets';
-import { normalizeMetrics, checkDeviations, DEFAULT_BASELINE } from '../utils/metrics';
+import { normalizeMetrics, checkDeviations, sustainedDeviations, DEFAULT_BASELINE } from '../utils/metrics';
 import { getPatient, savePatientMetrics, getPatientMetrics, saveAlert } from '../utils/storage';
 
 export default function PatientDashboard() {
@@ -17,9 +17,11 @@ export default function PatientDashboard() {
   const [alerts, setAlerts] = useState([]);
   const saveTimerRef = useRef(null);
   const lastAlertRef = useRef({});
+  const historyRef = useRef([]);
 
   useEffect(() => {
     const existing = getPatientMetrics(patient?.id || 'p1', 60);
+    historyRef.current = existing;
     if (existing.length > 0) {
       setHistory(existing);
       setCurrent(existing[existing.length - 1]);
@@ -34,13 +36,13 @@ export default function PatientDashboard() {
       balance_score: metrics.balanceScore,
       tremor_index: metrics.tremorIndex,
       gait_rhythm: metrics.gaitRhythm,
-      heart_rate_var: metrics.heartRateVar,
     }, baseline);
 
     setCurrent(normalized);
     setTracking(true);
 
-    const newAlerts = checkDeviations(normalized, baseline, 20);
+    const stableHistory = [...historyRef.current.slice(-3), normalized];
+    const newAlerts = sustainedDeviations(stableHistory, baseline, 20, 4);
     setAlerts(newAlerts);
 
     for (const alert of newAlerts) {
@@ -55,7 +57,9 @@ export default function PatientDashboard() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       const entry = savePatientMetrics(patient?.id || 'p1', normalized);
-      setHistory((prev) => [...prev.slice(-59), entry]);
+      const nextHistory = [...historyRef.current.slice(-59), entry];
+      historyRef.current = nextHistory;
+      setHistory(nextHistory);
     }, 500);
   }, [baseline, patient]);
 
@@ -63,12 +67,12 @@ export default function PatientDashboard() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8 xl:px-10">
-      <section className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-emerald-600">Patient Dashboard</p>
+            <p className="text-[11px] uppercase tracking-[0.32em] text-emerald-700">Patient Dashboard</p>
             <h2 className="mt-1 text-2xl font-semibold text-slate-900">AI Health Tracking — {patient?.name}</h2>
-            <p className="mt-1 text-xs text-slate-500">{tracking ? 'Live tracking active — all parameters updating in real-time' : 'Enable camera to start AI tracking'}</p>
+            <p className="mt-1 text-xs text-slate-500">{tracking ? 'Live tracking active — all parameters updating in real-time' : 'Enable camera access to start live AI tracking'}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${tracking ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>

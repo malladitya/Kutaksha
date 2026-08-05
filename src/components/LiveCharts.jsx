@@ -12,6 +12,7 @@ import {
   Legend,
   ComposedChart,
 } from 'recharts';
+import { severityFromCurrent } from '../utils/metrics';
 
 function formatTime(ts) {
   const d = new Date(ts);
@@ -45,7 +46,8 @@ export function HsiRiskChart({ data, height = 280 }) {
         <Tooltip content={<CustomTooltip />} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
         <ReferenceLine y={70} stroke="#fbbf24" strokeDasharray="4 4" label={{ value: 'Risk threshold', fontSize: 10, fill: '#d97706' }} />
-        <Area type="monotone" dataKey="hsi" fill="rgba(14,165,233,0.1)" stroke="#0ea5e9" strokeWidth={2} name="Health Stability" dot={false} />
+        <Area type="monotone" dataKey="hsi" fill="rgba(14,165,233,0.12)" stroke="#0ea5e9" strokeWidth={2} name="Health Stability" dot={false} />
+        <Line type="monotone" dataKey="severity" stroke="#f59e0b" strokeWidth={2.2} name="AI Severity" dot={false} />
         <Line type="monotone" dataKey="risk" stroke="#f43f5e" strokeWidth={2.5} name="Risk Score" dot={false} />
       </ComposedChart>
     </ResponsiveContainer>
@@ -87,7 +89,6 @@ export function MultiMetricGrid({ history, baseline }) {
     balance_score: h.balance_score,
     tremor_index: h.tremor_index,
     gait_rhythm: h.gait_rhythm,
-    heart_rate_var: h.heart_rate_var,
   }));
 
   const metrics = [
@@ -96,7 +97,6 @@ export function MultiMetricGrid({ history, baseline }) {
     { key: 'balance_score', label: 'Balance', color: '#10b981', unit: '%' },
     { key: 'tremor_index', label: 'Tremor', color: '#f59e0b', unit: '' },
     { key: 'gait_rhythm', label: 'Gait Rhythm', color: '#ec4899', unit: '%' },
-    { key: 'heart_rate_var', label: 'HRV', color: '#6366f1', unit: 'ms' },
   ];
 
   return (
@@ -119,17 +119,41 @@ export function MultiMetricGrid({ history, baseline }) {
 }
 
 export function buildTrendData(history, baseline) {
-  return history.map((h) => {
+  return history.map((h, index, arr) => {
     const speedDrop = Math.max(0, (baseline.walking_speed - h.walking_speed) / baseline.walking_speed);
     const activityDrop = Math.max(0, (baseline.activity_level - h.activity_level) / baseline.activity_level);
     const sittingRise = Math.max(0, (h.sitting_minutes - baseline.sitting_minutes) / baseline.sitting_minutes);
-    const hsi = Math.max(0, Math.min(100, Math.round(100 - speedDrop * 30 - activityDrop * 25 - sittingRise * 15)));
+    const balanceDrop = Math.max(0, (baseline.balance_score - h.balance_score) / baseline.balance_score);
+    const tremorRise = Math.max(0, (h.tremor_index - baseline.tremor_index) / Math.max(baseline.tremor_index, 1));
+    const postureDrop = Math.max(0, (baseline.posture_stability - h.posture_stability) / Math.max(baseline.posture_stability, 1));
+    const strideDrop = Math.max(0, (baseline.step_stride - h.step_stride) / Math.max(baseline.step_stride, 0.1));
+    const fatigueRise = Math.max(0, (h.fatigue_index - baseline.fatigue_index) / Math.max(baseline.fatigue_index, 1));
+    const varRise = Math.max(0, (h.movement_variability - baseline.movement_variability) / Math.max(baseline.movement_variability, 1));
+
+    const hsi = Math.max(0, Math.min(100, Math.round(100 - speedDrop * 24 - activityDrop * 18 - sittingRise * 12 - balanceDrop * 14 - tremorRise * 12 - postureDrop * 10 - strideDrop * 5 - fatigueRise * 8 - varRise * 6)));
+
     let risk = 0;
-    if (h.walking_speed < baseline.walking_speed * 0.85) risk += 25;
-    if (h.activity_level < baseline.activity_level * 0.7) risk += 20;
+    if (h.walking_speed < baseline.walking_speed * 0.85) risk += 20;
+    if (h.activity_level < baseline.activity_level * 0.7) risk += 15;
     if (h.sitting_minutes > baseline.sitting_minutes * 1.3) risk += 15;
+    if (h.walking_speed < baseline.walking_speed * 0.75) risk += 10;
     if (h.balance_score < baseline.balance_score * 0.8) risk += 15;
-    if (h.tremor_index > baseline.tremor_index * 1.5) risk += 15;
-    return { time: formatTime(h.timestamp), hsi, risk: Math.min(100, risk) };
+    if (h.tremor_index > baseline.tremor_index * 1.5) risk += 10;
+    if (h.posture_stability < baseline.posture_stability * 0.85) risk += 8;
+    if (h.step_stride < baseline.step_stride * 0.82) risk += 8;
+    if (h.fatigue_index > baseline.fatigue_index * 1.5) risk += 8;
+    if (h.movement_variability > baseline.movement_variability * 1.5) risk += 6;
+
+    const severity = severityFromCurrent(h, baseline);
+    const previous = arr[Math.max(0, index - 1)];
+    const trendDelta = previous ? Math.round((severity - severityFromCurrent(previous, baseline)) * 0.35) : 0;
+
+    return {
+      time: formatTime(h.timestamp),
+      hsi,
+      risk: Math.min(100, risk),
+      severity,
+      trajectory: Math.max(0, Math.min(100, hsi - trendDelta + 10)),
+    };
   });
 }

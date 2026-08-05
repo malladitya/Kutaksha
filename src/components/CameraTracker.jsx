@@ -3,14 +3,12 @@ import Webcam from 'react-webcam';
 
 const PROCESS_WIDTH = 480;
 const PROCESS_HEIGHT = 360;
-const METRIC_INTERVAL = 100;
-const FRAME_INTERVAL = 50;
+const METRIC_INTERVAL = 120;
+const FRAME_INTERVAL = 40;
 
-const CameraTracker = ({ onMetricsUpdate }) => {
+const CameraTracker = ({ onMetricsUpdate, onSpeedUpdate }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-  const offscreenRef = useRef(null);
-  const rafRef = useRef(null);
   const lastFrameRef = useRef(0);
   const lastMetricRef = useRef(0);
   const prevPositionsRef = useRef({ index: null, middle: null, wrist: null });
@@ -18,16 +16,27 @@ const CameraTracker = ({ onMetricsUpdate }) => {
   const jitterBufferRef = useRef([]);
   const rhythmBufferRef = useRef([]);
   const onMetricsRef = useRef(onMetricsUpdate);
+  const onSpeedRef = useRef(onSpeedUpdate);
 
   useEffect(() => {
     onMetricsRef.current = onMetricsUpdate;
-  }, [onMetricsUpdate]);
+    onSpeedRef.current = onSpeedUpdate;
+  }, [onMetricsUpdate, onSpeedUpdate]);
+
+  const emitMetrics = useCallback((metrics) => {
+    onMetricsRef.current?.(metrics);
+    onSpeedRef.current?.(metrics.walkingSpeed);
+  }, []);
 
   const computeMetrics = useCallback((indexTip, middleTip, wrist, dt) => {
     const prev = prevPositionsRef.current;
     let finalSpeed = emaSpeedRef.current;
+    let postureStability = 82;
+    let stepStride = 0.72;
+    let fatigueIndex = 18;
+    let movementVariability = 11;
 
-    if (prev.index && prev.middle && dt > 0) {
+    if (prev.index && prev.middle && dt > 0 && indexTip && middleTip) {
       const indexDist = Math.hypot(indexTip.x - prev.index.x, indexTip.y - prev.index.y);
       const middleDist = Math.hypot(middleTip.x - prev.middle.x, middleTip.y - prev.middle.y);
       const avgDist = (indexDist + middleDist) / 2;
@@ -44,15 +53,9 @@ const CameraTracker = ({ onMetricsUpdate }) => {
 
       jitterBufferRef.current.push(avgDist);
       if (jitterBufferRef.current.length > 20) jitterBufferRef.current.shift();
-      const jitter = jitterBufferRef.current.length > 3
-        ? jitterBufferRef.current.reduce((s, v, _, a) => s + Math.abs(v - a.reduce((x, y) => x + y, 0) / a.length), 0) / jitterBufferRef.current.length
-        : 0;
 
       rhythmBufferRef.current.push(velocity);
       if (rhythmBufferRef.current.length > 15) rhythmBufferRef.current.shift();
-      const rhythmVar = rhythmBufferRef.current.length > 3
-        ? Math.sqrt(rhythmBufferRef.current.reduce((s, v) => s + (v - rhythmBufferRef.current.reduce((a, b) => a + b, 0) / rhythmBufferRef.current.length) ** 2, 0) / rhythmBufferRef.current.length)
-        : 0;
     }
 
     const activityLevel = Math.round(Math.min(95, Math.max(15, (finalSpeed / 1.3) * 85)));
@@ -62,6 +65,8 @@ const CameraTracker = ({ onMetricsUpdate }) => {
     if (prev.wrist && wrist) {
       const wristStability = Math.hypot(wrist.x - prev.wrist.x, wrist.y - prev.wrist.y);
       balanceScore = Math.round(Math.min(95, Math.max(40, 90 - wristStability * 800)));
+      postureStability = Math.round(Math.min(95, Math.max(45, balanceScore + (finalSpeed * 8))));
+      stepStride = parseFloat(Math.min(1.15, Math.max(0.4, 0.42 + finalSpeed * 0.21)).toFixed(2));
     }
 
     const jitterAvg = jitterBufferRef.current.length > 3
@@ -76,8 +81,11 @@ const CameraTracker = ({ onMetricsUpdate }) => {
         }, 0) / rhythmBufferRef.current.length)
       : 0;
     const gaitRhythm = Math.round(Math.min(95, Math.max(45, 88 - rhythmVar * 15)));
-
     const heartRateVar = Math.round(Math.min(65, Math.max(25, 30 + finalSpeed * 25 - tremorIndex * 0.5)));
+
+    const variabilityInfluence = Math.max(0, rhythmVar * 6 + jitterAvg * 45);
+    movementVariability = parseFloat(Math.min(35, Math.max(4, variabilityInfluence / 2.2)).toFixed(1));
+    fatigueIndex = Math.round(Math.min(65, Math.max(8, 14 + Math.max(0, 1.25 - finalSpeed) * 28 + tremorIndex * 0.8)));
 
     return {
       walkingSpeed: finalSpeed,
@@ -87,12 +95,18 @@ const CameraTracker = ({ onMetricsUpdate }) => {
       tremorIndex,
       gaitRhythm,
       heartRateVar,
+      postureStability,
+      stepStride,
+      fatigueIndex,
+      movementVariability,
       isHighRisk: finalSpeed < 0.85 || activityLevel < 50 || balanceScore < 55,
     };
   }, []);
 
   useEffect(() => {
-    if (!window.Hands || !window.Camera) return;
+    if (!window.Hands || !window.Camera) {
+      return undefined;
+    }
 
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -122,36 +136,34 @@ const CameraTracker = ({ onMetricsUpdate }) => {
 
       const now = performance.now();
 
-      if (results.multiHandLandmarks?.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
+      if (results.multiHandLandmarks?.length === 0) {
+        ctx.restore();
+        return;
+      }
 
-        if (window.drawConnectors) {
-          window.drawConnectors(ctx, landmarks, window.HAND_CONNECTIONS, { color: '#10b981', lineWidth: 2 });
-        }
-        if (window.drawLandmarks) {
-          window.drawLandmarks(ctx, landmarks, { color: '#f43f5e', lineWidth: 1, radius: 2 });
-        }
+      const landmarks = results.multiHandLandmarks[0];
 
-        const indexTip = landmarks[8];
-        const middleTip = landmarks[12];
-        const wrist = landmarks[0];
+      if (window.drawConnectors) {
+        window.drawConnectors(ctx, landmarks, window.HAND_CONNECTIONS, { color: '#10b981', lineWidth: 2 });
+      }
+      if (window.drawLandmarks) {
+        window.drawLandmarks(ctx, landmarks, { color: '#f43f5e', lineWidth: 1, radius: 2 });
+      }
 
-        if (now - lastMetricRef.current > METRIC_INTERVAL) {
-          const dt = now - lastMetricRef.current;
-          const metrics = computeMetrics(indexTip, middleTip, wrist, dt);
-          onMetricsRef.current?.(metrics);
+      const indexTip = landmarks[8];
+      const middleTip = landmarks[12];
+      const wrist = landmarks[0];
 
-          prevPositionsRef.current = {
-            index: { x: indexTip.x, y: indexTip.y },
-            middle: { x: middleTip.x, y: middleTip.y },
-            wrist: { x: wrist.x, y: wrist.y },
-          };
-          lastMetricRef.current = now;
-        }
-      } else if (now - lastMetricRef.current > 200) {
-        emaSpeedRef.current = Math.max(0.35, emaSpeedRef.current * 0.92);
-        const metrics = computeMetrics(null, null, null, 200);
-        onMetricsRef.current?.(metrics);
+      if (now - lastMetricRef.current > METRIC_INTERVAL) {
+        const dt = now - lastMetricRef.current;
+        const metrics = computeMetrics(indexTip, middleTip, wrist, dt);
+        emitMetrics(metrics);
+
+        prevPositionsRef.current = {
+          index: { x: indexTip.x, y: indexTip.y },
+          middle: { x: middleTip.x, y: middleTip.y },
+          wrist: { x: wrist.x, y: wrist.y },
+        };
         lastMetricRef.current = now;
       }
 
@@ -191,10 +203,12 @@ const CameraTracker = ({ onMetricsUpdate }) => {
       if (camera) camera.stop();
       hands.close();
     };
-  }, [computeMetrics]);
+  }, [computeMetrics, emitMetrics]);
+
+  const trackingSupported = typeof window !== 'undefined' && !!window.Hands && !!window.Camera;
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+    <div className="relative w-full overflow-hidden rounded-2xl border border-sky-500/30 bg-slate-950 shadow-[0_20px_60px_rgba(15,23,42,0.35)]">
       <Webcam
         ref={webcamRef}
         mirrored
@@ -204,13 +218,17 @@ const CameraTracker = ({ onMetricsUpdate }) => {
         className="hidden"
       />
       <canvas ref={canvasRef} className="aspect-video w-full bg-slate-950 object-cover" />
+      {!trackingSupported && (
+        <div className="absolute inset-0 grid place-items-center bg-slate-950/90 px-6 text-center text-xs text-slate-200 backdrop-blur-sm">
+          <div>
+            <p className="mb-1 text-sm font-semibold text-rose-300">Camera access required</p>
+            <p>Enable your webcam to start live AI tracking.</p>
+          </div>
+        </div>
+      )}
       <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-emerald-500/50 bg-slate-900/80 px-3 py-1.5 font-mono text-xs text-emerald-400 backdrop-blur-md">
         <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
         Live AI Tracking
-      </div>
-      <div className="absolute bottom-3 left-3 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs text-slate-300 backdrop-blur-md">
-        <p className="mb-0.5 font-semibold text-emerald-400">Interactive Gait Simulation</p>
-        <p className="text-[11px] text-slate-400">Move fingers to simulate walking speed, balance, tremor &amp; rhythm</p>
       </div>
     </div>
   );
