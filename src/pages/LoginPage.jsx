@@ -14,11 +14,11 @@ export default function LoginPage({ onNavigate }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const session = login(email, password);
+    const session = await login(email, password);
     if (session) {
       const routes = { patient: '/dashboard/patient', caretaker: '/dashboard/caretaker', doctor: '/dashboard/doctor' };
       onNavigate(routes[session.role] || '/');
@@ -28,10 +28,10 @@ export default function LoginPage({ onNavigate }) {
     setLoading(false);
   };
 
-  const quickLogin = (account) => {
+  const quickLogin = async (account) => {
     setEmail(account.email);
     setPassword(account.password);
-    const session = login(account.email, account.password);
+    const session = await login(account.email, account.password);
     if (session) {
       const routes = { patient: '/dashboard/patient', caretaker: '/dashboard/caretaker', doctor: '/dashboard/doctor' };
       onNavigate(routes[session.role] || '/');
