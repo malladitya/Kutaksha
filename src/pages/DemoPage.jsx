@@ -15,19 +15,16 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const baseline = {
   walking_speed: 1.2,
   activity_level: 82,
-  sitting_minutes: 48,
 };
 
 const stableCurrent = {
   walking_speed: 1.15,
   activity_level: 78,
-  sitting_minutes: 55,
 };
 
 const declineCurrent = {
   walking_speed: 0.82,
   activity_level: 49,
-  sitting_minutes: 88,
 };
 
 const stableTrend = [
@@ -60,7 +57,6 @@ function normalizeMetrics(input, fallback) {
   return {
     walking_speed: asNumber(input.walking_speed ?? input.walkingSpeed, fallback.walking_speed),
     activity_level: asNumber(input.activity_level ?? input.activity ?? input.activityLevel, fallback.activity_level),
-    sitting_minutes: asNumber(input.sitting_minutes ?? input.sitting ?? input.sittingTime, fallback.sitting_minutes),
   };
 }
 
@@ -76,8 +72,7 @@ function normalizeTrend(input) {
 function hsiFromCurrent(current, base) {
   const speedDrop = Math.max(0, (base.walking_speed - current.walking_speed) / base.walking_speed);
   const activityDrop = Math.max(0, (base.activity_level - current.activity_level) / base.activity_level);
-  const sittingRise = Math.max(0, (current.sitting_minutes - base.sitting_minutes) / base.sitting_minutes);
-  const score = 100 - speedDrop * 45 - activityDrop * 35 - sittingRise * 20;
+  const score = 100 - speedDrop * 45 - activityDrop * 35;
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
@@ -85,7 +80,6 @@ function riskFromCurrent(current, base) {
   let risk = 0;
   if (current.walking_speed < base.walking_speed * 0.85) risk += 30;
   if (current.activity_level < base.activity_level * 0.7) risk += 25;
-  if (current.sitting_minutes > base.sitting_minutes * 1.3) risk += 20;
   if (current.walking_speed < base.walking_speed * 0.75) risk += 15;
   return Math.min(100, risk);
 }
@@ -180,12 +174,11 @@ export default function DemoPage() {
     return {
       walking: metricChange(currentData.walking_speed, baselineData.walking_speed),
       activity: metricChange(currentData.activity_level, baselineData.activity_level),
-      sitting: metricChange(currentData.sitting_minutes, baselineData.sitting_minutes),
     };
   }, [currentData, baselineData]);
 
   const summary = riskScore >= 70
-    ? 'Sustained downward trend detected in mobility and activity. Sitting duration is elevated versus baseline.'
+    ? 'Sustained downward trend detected in walking speed and activity. Mobility decline is becoming more pronounced.'
     : 'Behavior remains near baseline with no sustained decline trajectory.';
 
   useEffect(() => {
@@ -195,7 +188,7 @@ export default function DemoPage() {
         if (mounted) {
           setLlmSummary(
             riskScore >= 70
-              ? 'Walking speed and activity are significantly below baseline while sitting time is elevated. Recommend proactive caregiver intervention.'
+              ? 'Walking speed and activity are significantly below baseline. Recommend proactive caregiver intervention.'
               : 'Current behavior remains close to baseline. Continue regular preventive monitoring.'
           );
         }
@@ -346,12 +339,7 @@ export default function DemoPage() {
                     <td className="px-3 py-2">{currentData.activity_level}%</td>
                     <td className={`px-3 py-2 font-semibold ${trendLabel(changeSet.activity)}`}>{changeSet.activity}%</td>
                   </tr>
-                  <tr className="border-t border-slate-200 text-slate-700">
-                    <td className="px-3 py-2">Sitting</td>
-                    <td className="px-3 py-2">{baselineData.sitting_minutes} min</td>
-                    <td className="px-3 py-2">{currentData.sitting_minutes} min</td>
-                    <td className={`px-3 py-2 font-semibold ${trendLabel(changeSet.sitting, true)}`}>+{Math.max(0, changeSet.sitting)}%</td>
-                  </tr>
+
                 </tbody>
               </table>
             </div>
@@ -365,7 +353,7 @@ export default function DemoPage() {
             </div>
             {featureSnapshot && (
               <p className="mt-3 text-xs text-slate-600">
-                Latest features: speed {asNumber(featureSnapshot.walking_speed ?? featureSnapshot.walkingSpeed, currentData.walking_speed).toFixed(2)} m/s, activity {asNumber(featureSnapshot.activity_level ?? featureSnapshot.activityLevel ?? featureSnapshot.activity, currentData.activity_level)}%, sitting {asNumber(featureSnapshot.sitting_minutes ?? featureSnapshot.sitting, currentData.sitting_minutes)} min.
+                Latest features: speed {asNumber(featureSnapshot.walking_speed ?? featureSnapshot.walkingSpeed, currentData.walking_speed).toFixed(2)} m/s, activity {asNumber(featureSnapshot.activity_level ?? featureSnapshot.activityLevel ?? featureSnapshot.activity, currentData.activity_level)}%.
               </p>
             )}
           </article>

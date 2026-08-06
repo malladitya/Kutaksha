@@ -85,7 +85,6 @@ export function MultiMetricGrid({ history, baseline }) {
     time: formatTime(h.timestamp),
     walking_speed: h.walking_speed,
     activity_level: h.activity_level,
-    sitting_minutes: h.sitting_minutes,
     balance_score: h.balance_score,
     tremor_index: h.tremor_index,
     gait_rhythm: h.gait_rhythm,
@@ -122,7 +121,6 @@ export function buildTrendData(history, baseline) {
   return history.map((h, index, arr) => {
     const speedDrop = Math.max(0, (baseline.walking_speed - h.walking_speed) / baseline.walking_speed);
     const activityDrop = Math.max(0, (baseline.activity_level - h.activity_level) / baseline.activity_level);
-    const sittingRise = Math.max(0, (h.sitting_minutes - baseline.sitting_minutes) / baseline.sitting_minutes);
     const balanceDrop = Math.max(0, (baseline.balance_score - h.balance_score) / baseline.balance_score);
     const tremorRise = Math.max(0, (h.tremor_index - baseline.tremor_index) / Math.max(baseline.tremor_index, 1));
     const postureDrop = Math.max(0, (baseline.posture_stability - h.posture_stability) / Math.max(baseline.posture_stability, 1));
@@ -130,12 +128,11 @@ export function buildTrendData(history, baseline) {
     const fatigueRise = Math.max(0, (h.fatigue_index - baseline.fatigue_index) / Math.max(baseline.fatigue_index, 1));
     const varRise = Math.max(0, (h.movement_variability - baseline.movement_variability) / Math.max(baseline.movement_variability, 1));
 
-    const hsi = Math.max(0, Math.min(100, Math.round(100 - speedDrop * 24 - activityDrop * 18 - sittingRise * 12 - balanceDrop * 14 - tremorRise * 12 - postureDrop * 10 - strideDrop * 5 - fatigueRise * 8 - varRise * 6)));
+    const hsi = Math.max(0, Math.min(100, Math.round(100 - speedDrop * 24 - activityDrop * 18 - balanceDrop * 14 - tremorRise * 12 - postureDrop * 10 - strideDrop * 5 - fatigueRise * 8 - varRise * 6)));
 
     let risk = 0;
     if (h.walking_speed < baseline.walking_speed * 0.85) risk += 20;
     if (h.activity_level < baseline.activity_level * 0.7) risk += 15;
-    if (h.sitting_minutes > baseline.sitting_minutes * 1.3) risk += 15;
     if (h.walking_speed < baseline.walking_speed * 0.75) risk += 10;
     if (h.balance_score < baseline.balance_score * 0.8) risk += 15;
     if (h.tremor_index > baseline.tremor_index * 1.5) risk += 10;

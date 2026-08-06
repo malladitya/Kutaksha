@@ -5,7 +5,7 @@ const modules = [
   },
   {
     title: 'Pose + Feature Extraction',
-    points: ['33 pose landmarks', 'Walking speed estimation', 'Activity and sitting metrics'],
+    points: ['33 pose landmarks', 'Walking speed estimation', 'Activity and mobility metrics'],
   },
   {
     title: 'Digital Twin + Comparison',

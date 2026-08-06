@@ -72,7 +72,7 @@ export default function PatientDashboard() {
           <div>
             <p className="text-[11px] uppercase tracking-[0.32em] text-emerald-700">Patient Dashboard</p>
             <h2 className="mt-1 text-2xl font-semibold text-slate-900">AI Health Tracking — {patient?.name}</h2>
-            <p className="mt-1 text-xs text-slate-500">{tracking ? 'Live tracking active — all parameters updating in real-time' : 'Enable camera access to start live AI tracking'}</p>
+            <p className="mt-1 text-xs text-slate-500">{tracking ? 'Live walking-focused tracking active — mobility metrics updating in real time' : 'Enable camera access to start live walking analysis'}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${tracking ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>

@@ -59,7 +59,7 @@ export function MetricsTable({ current, baseline }) {
                 <td className="px-3 py-2.5 font-medium">{meta.label}</td>
                 <td className="px-3 py-2.5">{base.toFixed(meta.decimals)}{meta.unit ? ' ' + meta.unit : ''}</td>
                 <td className="px-3 py-2.5 font-semibold">{curr.toFixed(meta.decimals)}{meta.unit ? ' ' + meta.unit : ''}</td>
-                <td className={`px-3 py-2.5 font-semibold ${trendLabel(change, key === 'sitting_minutes' || key === 'tremor_index')}`}>
+                <td className={`px-3 py-2.5 font-semibold ${trendLabel(change)}`}>
                   {change > 0 ? '+' : ''}{change}%
                 </td>
                 <td className="px-3 py-2.5">
@@ -123,7 +123,7 @@ export function InsightPanel({ current, baseline, alerts }) {
   } else if (severity >= 70 || risk >= 70) {
     summary = 'AI severity composite is elevated because mobility and behavioral consistency are trending away from the patient baseline.';
   } else if (hsi < 70) {
-    summary = 'Health stability index declining. Monitor walking speed, posture, and activity consistency closely.';
+    summary = 'Health stability index declining. Monitor walking speed, balance, and activity consistency closely.';
   }
 
   return (
