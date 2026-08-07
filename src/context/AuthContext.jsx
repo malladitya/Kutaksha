@@ -41,6 +41,7 @@ export function AuthProvider({ children }) {
         try {
           const profile = await getProfile();
           setUser(normalizeUser({ ...profile, token }));
+          setLoading(false);
           return;
         } catch {
           localStorage.removeItem('kutaksha_token');
@@ -67,9 +68,9 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     try {
       const tokenResponse = await loginToBackend({ username: email, password });
+      localStorage.setItem('kutaksha_token', tokenResponse.access_token);
       const profile = await getProfile();
       const session = normalizeUser({ ...profile, token: tokenResponse.access_token });
-      localStorage.setItem('kutaksha_token', tokenResponse.access_token);
       setUser(session);
       return session;
     } catch {

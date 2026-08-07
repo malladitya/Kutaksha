@@ -71,6 +71,7 @@ class BehaviourFeaturePayload(BaseModel):
 
 
 class CameraAnalysisRequest(BaseModel):
+    image: Optional[str] = None
     frame_source: str = "webcam"
     activity_hint: Optional[str] = None
 
@@ -84,6 +85,35 @@ class CameraAnalysisResponse(BaseModel):
     features: BehaviourFeaturePayload
     context_summary: str
     risk_signal: Dict[str, Any]
+
+
+class ExplainRequest(BaseModel):
+    baseline: Dict[str, Any]
+    current: Dict[str, Any]
+    health_stability: float
+    risk_score: float
+
+
+class ExplainResponse(BaseModel):
+    behaviour_summary: str
+    reasons: List[str]
+    recommendations: List[str]
+    caregiver_explanation: str
+    doctor_summary: str
+    risk: Dict[str, Any]
+
+
+class DigitalTwinResponse(BaseModel):
+    baseline: Dict[str, Any]
+    current: Dict[str, Any]
+    timeline: List[Dict[str, Any]]
+    health_stability: float
+    risk_score: float
+
+
+class SimulateRequest(BaseModel):
+    days: int = 7
+    mode: str = "decline"
 
 
 class DashboardSummary(BaseModel):
