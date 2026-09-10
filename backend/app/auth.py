@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -7,9 +8,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
 from app.database import get_db
 from app.models import User
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 SECRET_KEY = os.getenv("JWT_SECRET", "dev-secret-key")
 ALGORITHM = "HS256"

@@ -6,6 +6,7 @@ const footerLinks = [
   { path: '/technology', label: 'Technology' },
   { path: '/privacy', label: 'Privacy' },
   { path: '/demo', label: 'Live Demo' },
+  { path: '/assistant', label: 'Assistant' },
   { path: '/contact', label: 'Contact' },
 ];
 

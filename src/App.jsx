@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MessageCircle, X } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import SiteHeader from './components/SiteHeader';
 import SiteFooter from './components/SiteFooter';
@@ -8,6 +9,7 @@ import TechnologyPage from './pages/TechnologyPage';
 import PrivacyPage from './pages/PrivacyPage';
 import DemoPage from './pages/DemoPage';
 import ContactPage from './pages/ContactPage';
+import AssistantPage from './pages/AssistantPage';
 import LoginPage from './pages/LoginPage';
 import PatientDashboard from './pages/PatientDashboard';
 import CaretakerDashboard from './pages/CaretakerDashboard';
@@ -25,6 +27,7 @@ const PROTECTED_ROUTES = {
 
 function AppRoutes() {
   const [path, setPath] = useState(getPathname());
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const { user, loading } = useAuth();
 
   useEffect(() => {
@@ -71,6 +74,8 @@ function AppRoutes() {
         return <DemoPage onNavigate={navigate} />;
       case '/contact':
         return <ContactPage onNavigate={navigate} />;
+      case '/assistant':
+        return <AssistantPage onNavigate={navigate} />;
       case '/login':
         return <LoginPage onNavigate={navigate} />;
       case '/dashboard/patient':
@@ -89,6 +94,39 @@ function AppRoutes() {
       <SiteHeader currentPath={path} onNavigate={navigate} />
       <main>{page}</main>
       <SiteFooter onNavigate={navigate} />
+      {user && path !== '/assistant' && assistantOpen && (
+        <aside className="fixed inset-y-4 right-4 z-50 flex w-[calc(100vw-2rem)] max-w-md flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-teal-700">Kutaksha Assistant</p>
+              <p className="text-sm font-semibold text-slate-900">Medical records and behavior</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAssistantOpen(false)}
+              aria-label="Close medical records assistant"
+              title="Close assistant"
+              className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto py-4">
+            <AssistantPage onNavigate={navigate} />
+          </div>
+        </aside>
+      )}
+      {user && path !== '/assistant' && (
+        <button
+          type="button"
+          onClick={() => setAssistantOpen((open) => !open)}
+          aria-label={assistantOpen ? 'Close medical records assistant' : 'Open medical records assistant'}
+          title={assistantOpen ? 'Close assistant' : 'Open medical records assistant'}
+          className="fixed bottom-5 right-5 z-[51] flex h-14 w-14 items-center justify-center rounded-full border border-teal-200 bg-slate-900 text-teal-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] transition hover:-translate-y-1 hover:bg-teal-700 hover:text-white focus:outline-none focus:ring-4 focus:ring-teal-300/50"
+        >
+          {assistantOpen ? <X size={23} strokeWidth={1.8} aria-hidden="true" /> : <MessageCircle size={23} strokeWidth={1.8} aria-hidden="true" />}
+        </button>
+      )}
     </div>
   );
 }
