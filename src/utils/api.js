@@ -21,6 +21,10 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('kutaksha_token');
+      window.dispatchEvent(new Event('kutaksha-auth-expired'));
+    }
     const errorBody = await response.text().catch(() => '');
     const error = new Error(`API request failed (${response.status}): ${response.statusText}`);
     error.status = response.status;
@@ -63,14 +67,18 @@ export function describeApiError(error) {
  * Ask the RAG assistant. The LangGraph pipeline can take a while, so this
  * aborts rather than hanging the UI forever.
  */
-export async function askRag(query, chatHistory = [], { timeoutMs = 60000 } = {}) {
+export async function askRag(query, chatHistory = [], { timeoutMs = 180000, behaviorContext = null } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await request('/chat/query', {
       method: 'POST',
-      body: JSON.stringify({ query, chat_history: chatHistory }),
+      body: JSON.stringify({
+        query,
+        chat_history: chatHistory,
+        behavior_context: behaviorContext,
+      }),
       signal: controller.signal,
     });
   } finally {

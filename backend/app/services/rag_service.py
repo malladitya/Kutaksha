@@ -46,7 +46,10 @@ class RagService:
         self._graph = graph
 
     def answer(
-        self, query: str, chat_history: List[Dict[str, str]] | None = None
+        self,
+        query: str,
+        chat_history: List[Dict[str, str]] | None = None,
+        behavior_context: Dict[str, Any] | None = None,
     ) -> RagAnswer:
         try:
             final_state = self._graph.invoke(
@@ -54,6 +57,7 @@ class RagService:
                     "user_query": query,
                     "chat_history": list(chat_history or []),
                     "messages": [],
+                    "behavior_context": behavior_context or {},
                 }
             )
         except Exception as exc:  # noqa: BLE001 - surfaced to the caller as RagError

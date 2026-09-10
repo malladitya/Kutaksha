@@ -36,10 +36,12 @@ def chat_query(
     service = provider()
 
     try:
-        result = service.answer(
-            payload.query,
-            chat_history=[turn.model_dump() for turn in payload.chat_history],
-        )
+        answer_args = {
+            "chat_history": [turn.model_dump() for turn in payload.chat_history],
+        }
+        if payload.behavior_context is not None:
+            answer_args["behavior_context"] = payload.behavior_context.model_dump()
+        result = service.answer(payload.query, **answer_args)
     except RagError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

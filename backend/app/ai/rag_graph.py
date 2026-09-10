@@ -12,16 +12,20 @@ Extracted from `Kutaksha Rag.ipynb` and adapted to run inside FastAPI:
 from __future__ import annotations
 
 import os
+import json
 import threading
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from app.services.rag_service import RagService, RagUnavailable
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 DEFAULT_DOCS_DIR = Path(__file__).resolve().parents[2] / "docs"
 DEFAULT_INDEX_DIR = Path(__file__).resolve().parents[2] / "rag_index"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
 _service: Optional[RagService] = None
 _lock = threading.Lock()
@@ -100,7 +104,7 @@ def _build_graph():
     from langgraph.graph import END, START, StateGraph
     from langgraph.graph.message import add_messages
     from pydantic import BaseModel, Field
-    from typing_extensions import Annotated, TypedDict
+    from typing_extensions import TypedDict
 
     folder = docs_dir()
     llm = ChatGoogleGenerativeAI(model=GEMINI_MODEL)
@@ -176,8 +180,9 @@ def _build_graph():
         analysis_result: str
         intent_agent: str
         reportanalyzer_agent: str
-        messages: Annotated[list, add_messages]
+        messages: list
         chat_history: list
+        behavior_context: Dict[str, Any]
 
     class UserIntent(BaseModel):
         intent: Literal[
@@ -204,14 +209,20 @@ def _build_graph():
     medication_llm = llm.with_structured_output(MedicationOutput)
     intent_llm = llm.with_structured_output(UserIntent)
 
+    def behavior_evidence(state: Dict[str, Any]) -> str:
+        context = state.get("behavior_context") or {}
+        if not context:
+            return "No frontend behavior data was supplied for this question."
+        return json.dumps(context, ensure_ascii=True, indent=2)
+
     # ------------------------------------------------------------------ nodes
-    def user_query(state: UltimateState) -> Dict[str, Any]:
+    def user_query(state: Dict[str, Any]) -> Dict[str, Any]:
         query = (state.get("user_query") or "").strip()
         if not query:
             raise ValueError("No user query was supplied to the chatbot.")
         return {"user_query": query, "messages": [HumanMessage(content=query)]}
 
-    def intent_agent(state: UltimateState) -> Dict[str, Any]:
+    def intent_agent(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = PromptTemplate(
             template="""
 You are a router agent. Your only job is to identify the intent of the
@@ -232,27 +243,28 @@ User query:
         result = intent_llm.invoke(prompt.format(user_query=state["user_query"]))
         return {"user_intent": result.intent, "intent_agent": result.intent}
 
-    def retrieve(state: UltimateState) -> Dict[str, Any]:
+    def retrieve(state: Dict[str, Any]) -> Dict[str, Any]:
         retrieved = rag_search(state["user_query"], search_type="medical_report")
         return {"retrieved_context": retrieved, "recieved_documents": [retrieved]}
 
-    def report_analysis(state: UltimateState) -> Dict[str, Any]:
+    def report_analysis(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """You are a medical-report analysis assistant.
-Answer the user's query using ONLY the retrieved medical report below.
+                    """You are a medical-report and behavior analysis assistant.
+Answer the user's query using ONLY the retrieved medical report and frontend behavior evidence below.
 Give a clear, useful answer with:
 1. Key findings
 2. Relevant clinical details
-3. Source used
-Do not invent missing facts, diagnose, or prescribe.
+3. Relevant behavior trends compared with the supplied baseline, when applicable
+4. Source used
+Do not invent missing facts, diagnose, or prescribe. Treat behavior metrics as observational signals, not a diagnosis.
 If the retrieved text says no relevant information was found, say so.""",
                 ),
                 (
                     "human",
-                    "User Query:\n{user_query}\n\nRetrieved Medical Report:\n{retrieved_information}",
+                    "User Query:\n{user_query}\n\nRetrieved Medical Report:\n{retrieved_information}\n\nFrontend Behavior Evidence:\n{behavior_information}",
                 ),
             ]
         )
@@ -260,6 +272,7 @@ If the retrieved text says no relevant information was found, say so.""",
             prompt.format_messages(
                 user_query=state["user_query"],
                 retrieved_information=state.get("retrieved_context", ""),
+                behavior_information=behavior_evidence(state),
             )
         )
         answer = (result.report or "").strip() or "No report analysis was generated."
@@ -270,18 +283,19 @@ If the retrieved text says no relevant information was found, say so.""",
             "recieved_documents": result.resources or state.get("recieved_documents", []),
         }
 
-    def medication_analysis(state: UltimateState) -> Dict[str, Any]:
+    def medication_analysis(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """Analyze the retrieved medication information and generate the answer
-using ONLY the retrieved documents. Do not invent or assume medication information.
+                    """Analyze the retrieved medication information and frontend behavior evidence.
+Use ONLY the supplied evidence. Do not invent or assume medication information.
+Mention behavior context only when it is relevant to the user's question.
 Do not prescribe new medication.""",
                 ),
                 (
                     "human",
-                    "User Query:\n{user_query}\n\nRetrieved Information:\n{retrieved_information}",
+                    "User Query:\n{user_query}\n\nRetrieved Information:\n{retrieved_information}\n\nFrontend Behavior Evidence:\n{behavior_information}",
                 ),
             ]
         )
@@ -289,6 +303,7 @@ Do not prescribe new medication.""",
             prompt.format_messages(
                 user_query=state["user_query"],
                 retrieved_information=state.get("retrieved_context", ""),
+                behavior_information=behavior_evidence(state),
             )
         )
         return {
@@ -297,13 +312,13 @@ Do not prescribe new medication.""",
             "recieved_documents": result.sources or state.get("recieved_documents", []),
         }
 
-    def general_analysis(state: UltimateState) -> Dict[str, Any]:
+    def general_analysis(state: Dict[str, Any]) -> Dict[str, Any]:
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    """You are a patient medical-record assistant.
-Answer the user's question using the retrieved medical records below.
+                    """You are a patient medical-record and behavior assistant.
+Answer the user's question using the retrieved medical records and frontend behavior evidence below.
 
 Rules:
 - Use the retrieved records as the evidence.
@@ -311,12 +326,13 @@ Rules:
 - Do not claim that information is unavailable merely because the intent is 'medical records'.
 - Only say information is unavailable when the retrieved context genuinely does not contain it.
 - Do not invent patient facts.
+- Treat behavior metrics as observational signals and compare them with the supplied baseline when relevant.
 - Do not diagnose or prescribe new treatment.
 - Keep the answer concise but include the important clinical details and source when available.""",
                 ),
                 (
                     "human",
-                    "User Query:\n{user_query}\n\nRetrieved Medical Records:\n{retrieved_information}",
+                    "User Query:\n{user_query}\n\nRetrieved Medical Records:\n{retrieved_information}\n\nFrontend Behavior Evidence:\n{behavior_information}",
                 ),
             ]
         )
@@ -324,11 +340,12 @@ Rules:
             prompt.format_messages(
                 user_query=state["user_query"],
                 retrieved_information=state.get("retrieved_context", ""),
+                behavior_information=behavior_evidence(state),
             )
         )
         return {"analysis_result": result.content}
 
-    def analysis_router(state: UltimateState) -> str:
+    def analysis_router(state: Dict[str, Any]) -> str:
         if state.get("user_intent") == "seeking reports analyzation":
             return "report_analysis"
         if state.get("user_intent") == "seeking medication analysis":

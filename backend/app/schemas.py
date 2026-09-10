@@ -117,9 +117,21 @@ class ChatTurn(BaseModel):
     assistant: str
 
 
+class BehaviorContext(BaseModel):
+    patient_id: Optional[str] = None
+    patient_name: Optional[str] = None
+    baseline: Dict[str, Any] = Field(default_factory=dict)
+    latest: Dict[str, Any] = Field(default_factory=dict)
+    history: List[Dict[str, Any]] = Field(default_factory=list, max_length=60)
+    hsi: Optional[float] = None
+    risk_score: Optional[float] = None
+    severity_score: Optional[float] = None
+
+
 class ChatQueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     chat_history: List[ChatTurn] = Field(default_factory=list)
+    behavior_context: Optional[BehaviorContext] = None
 
     @field_validator("query")
     @classmethod

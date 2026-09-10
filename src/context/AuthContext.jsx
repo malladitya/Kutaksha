@@ -33,6 +33,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     initStorage();
+    const handleAuthExpired = () => {
+      doLogout();
+      setUser(null);
+    };
+    window.addEventListener('kutaksha-auth-expired', handleAuthExpired);
+
     const bootstrap = async () => {
       const saved = getSession();
       const token = localStorage.getItem('kutaksha_token');
@@ -45,6 +51,10 @@ export function AuthProvider({ children }) {
           return;
         } catch {
           localStorage.removeItem('kutaksha_token');
+          doLogout();
+          setUser(null);
+          setLoading(false);
+          return;
         }
       }
 
@@ -63,6 +73,7 @@ export function AuthProvider({ children }) {
     };
 
     bootstrap();
+    return () => window.removeEventListener('kutaksha-auth-expired', handleAuthExpired);
   }, []);
 
   const login = useCallback(async (email, password) => {
