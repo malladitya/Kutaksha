@@ -152,6 +152,30 @@ A measure of how inconsistent motion is over time.
 - `src/pages/DoctorDashboard.jsx` — doctor monitoring dashboard
 - `src/utils/reports.js` — report and CSV generation
 
+## RAG medical-records assistant
+
+The LangGraph + Gemini assistant is wired into the app end to end:
+
+```
+/assistant page  ->  src/utils/api.js askRag()  ->  POST /chat/query (FastAPI)
+                 ->  app/ai/rag_graph.py (LangGraph + FAISS + Gemini)
+```
+
+- **Frontend:** `src/pages/AssistantPage.jsx`, reachable at `/assistant` (sign-in required).
+- **Backend:** `backend/app/api/chat_routes.py` + `backend/app/services/rag_service.py`.
+- **Graph:** `backend/app/ai/rag_graph.py`, extracted from `Kutaksha Rag.ipynb`.
+
+The assistant is optional. Without `GOOGLE_API_KEY`, the RAG dependencies, or
+report PDFs, the rest of the app is unaffected and `/chat/query` returns a 503
+explaining what is missing. Setup instructions are in `backend/README.md`.
+
+## Tests
+
+```bash
+npm test                 # frontend (vitest)
+cd backend && python -m pytest -q    # backend (pytest)
+```
+
 ## Environment setup
 
 1. Install dependencies:

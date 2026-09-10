@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -110,6 +110,30 @@ class DigitalTwinResponse(BaseModel):
 class SimulateRequest(BaseModel):
     days: int = 7
     mode: str = "decline"
+
+
+class ChatTurn(BaseModel):
+    user: str
+    assistant: str
+
+
+class ChatQueryRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    chat_history: List[ChatTurn] = Field(default_factory=list)
+
+    @field_validator("query")
+    @classmethod
+    def query_must_not_be_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("query must not be blank")
+        return stripped
+
+
+class ChatQueryResponse(BaseModel):
+    answer: str
+    intent: str
+    sources: List[str] = Field(default_factory=list)
 
 
 class DashboardSummary(BaseModel):

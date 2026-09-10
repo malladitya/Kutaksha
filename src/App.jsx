@@ -8,6 +8,7 @@ import TechnologyPage from './pages/TechnologyPage';
 import PrivacyPage from './pages/PrivacyPage';
 import DemoPage from './pages/DemoPage';
 import ContactPage from './pages/ContactPage';
+import AssistantPage from './pages/AssistantPage';
 import LoginPage from './pages/LoginPage';
 import PatientDashboard from './pages/PatientDashboard';
 import CaretakerDashboard from './pages/CaretakerDashboard';
@@ -71,6 +72,8 @@ function AppRoutes() {
         return <DemoPage onNavigate={navigate} />;
       case '/contact':
         return <ContactPage onNavigate={navigate} />;
+      case '/assistant':
+        return <AssistantPage onNavigate={navigate} />;
       case '/login':
         return <LoginPage onNavigate={navigate} />;
       case '/dashboard/patient':
