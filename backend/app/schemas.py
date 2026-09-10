@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -23,15 +23,13 @@ class Token(BaseModel):
 
 
 class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     email: str
     username: str
     role: str
     full_name: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
 
 class PatientCreate(BaseModel):
     full_name: str
@@ -43,6 +41,8 @@ class PatientCreate(BaseModel):
 
 
 class PatientOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     owner_id: int
     full_name: str
@@ -52,10 +52,6 @@ class PatientOut(BaseModel):
     emergency_contact: Optional[str] = None
     consent_status: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
-
 
 class BehaviourFeaturePayload(BaseModel):
     walking_speed: float
