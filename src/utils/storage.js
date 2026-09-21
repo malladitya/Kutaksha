@@ -15,7 +15,21 @@ const DEMO_USERS = [
 ];
 
 const DEMO_PATIENTS = [
-  { id: 'p1', name: 'Rajesh Kumar', age: 72, condition: 'Mild mobility decline', caretakerId: 'u2', doctorId: 'u3', baseline: { ...DEFAULT_BASELINE } },
+  {
+    id: 'p1',
+    name: 'Rajesh Kumar',
+    age: 72,
+    condition: 'Mild mobility decline',
+    previousMedicalConditions: [
+      { condition: 'Hypertension', diagnosed: '2016', status: 'Controlled with ongoing treatment' },
+      { condition: 'Type 2 diabetes', diagnosed: '2018', status: 'Managed with medication and diet' },
+      { condition: 'Bilateral knee osteoarthritis', diagnosed: '2021', status: 'Intermittent pain affecting mobility' },
+      { condition: 'Fall with minor hip injury', diagnosed: '2023', status: 'Recovered; fall-risk monitoring advised' },
+    ],
+    caretakerId: 'u2',
+    doctorId: 'u3',
+    baseline: { ...DEFAULT_BASELINE },
+  },
   { id: 'p2', name: 'Lakshmi Devi', age: 68, condition: 'Post-stroke recovery', caretakerId: null, doctorId: 'u3', baseline: { walking_speed: 0.95, activity_level: 65, sitting_minutes: 72, balance_score: 62, tremor_index: 18, gait_rhythm: 70 } },
   { id: 'p3', name: 'Suresh Patel', age: 75, condition: 'Parkinson\'s monitoring', caretakerId: null, doctorId: 'u3', baseline: { walking_speed: 0.88, activity_level: 58, sitting_minutes: 85, balance_score: 55, tremor_index: 28, gait_rhythm: 62 } },
 ];

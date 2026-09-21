@@ -12,6 +12,7 @@ def reset_cache():
 
 
 def test_build_fails_clearly_when_the_api_key_is_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr(rag_graph, "LLM_PROVIDER", "gemini")
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.setenv("RAG_DOCS_DIR", str(tmp_path))
 

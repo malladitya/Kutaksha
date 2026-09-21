@@ -63,10 +63,9 @@ If that variable is set, the app can call endpoints such as:
 These are referenced in `src/pages/DemoPage.jsx` and `src/pages/TechnologyPage.jsx`.
 
 ### Important note
-- This repository currently contains the frontend demo and local scoring logic.
-- It does not include a production AI backend or cloud model deployment.
-- If you are using a backend API, that service should be hosted separately and its base URL should be provided through `VITE_API_BASE_URL`.
-- No OpenAI or Azure OpenAI API key is wired into the current front-end code.
+- The repository includes a FastAPI backend for authentication, dashboards, demo analysis, and the optional RAG assistant.
+- The frontend talks to the backend through `VITE_API_BASE_URL`, which defaults to `http://localhost:8000`.
+- The RAG assistant uses Ollama by default, with LangGraph, FAISS, and local medical documents. Gemini remains an optional hosted provider.
 
 ## Main metric terms used in the graphs
 
@@ -142,6 +141,12 @@ A measure of how inconsistent motion is over time.
 7. Alerts are generated when deviations remain sustained over time.
 8. Reports can be downloaded for caregiver or doctor review.
 
+When the signed-in user opens the assistant, the frontend sends the latest behavior
+metrics, baseline, recent tracking history, HSI, risk score, and severity score to
+the backend. The RAG graph combines that behavior evidence with retrieved medical
+report content before generating an answer. Behavior metrics are observational
+signals and are not a diagnosis.
+
 ## Files of interest
 
 - `src/components/CameraTracker.jsx` — webcam + MediaPipe tracking
@@ -164,10 +169,76 @@ The LangGraph + Gemini assistant is wired into the app end to end:
 - **Frontend:** `src/pages/AssistantPage.jsx`, reachable at `/assistant` (sign-in required).
 - **Backend:** `backend/app/api/chat_routes.py` + `backend/app/services/rag_service.py`.
 - **Graph:** `backend/app/ai/rag_graph.py`, extracted from `Kutaksha Rag.ipynb`.
+- **Floating launcher:** signed-in users can open the assistant from the bottom-right button without leaving the current page.
 
 The assistant is optional. Without `GOOGLE_API_KEY`, the RAG dependencies, or
 report PDFs, the rest of the app is unaffected and `/chat/query` returns a 503
-explaining what is missing. Setup instructions are in `backend/README.md`.
+explaining what is missing.
+
+### Enable the RAG assistant
+
+1. Install frontend dependencies from the repository root:
+
+```powershell
+npm install
+```
+
+2. Install backend dependencies:
+
+```powershell
+cd backend
+..\.venv-1\Scripts\python.exe -m pip install -r requirements.txt
+..\.venv-1\Scripts\python.exe -m pip install -r requirements-rag.txt
+```
+
+Use your configured Python environment if it has a different path.
+
+3. Install Ollama and download the local answer model:
+
+```powershell
+ollama pull llama3.2:3b
+```
+
+4. Configure `backend/.env`:
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2:3b
+```
+
+Ollama runs locally and does not use Gemini API quota. To use Gemini instead,
+set the provider and key:
+
+```env
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+5. Put at least one text-readable medical report PDF in:
+
+```text
+backend/docs/
+```
+
+CSV sensor exports are optional. Do not commit real patient documents or API
+keys. The first RAG request builds and caches FAISS indexes in
+`backend/rag_index/`; delete that folder after changing source documents.
+
+6. Start the backend from the `backend` directory:
+
+```powershell
+..\.venv-1\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+```
+
+7. In a second terminal, from the repository root, start the frontend:
+
+```powershell
+npm run dev
+```
+
+Sign in, open **Assistant**, and ask a question about the uploaded report or the
+patient's behavior trend. The chat endpoint requires a valid JWT.
 
 ## Tests
 
@@ -195,9 +266,16 @@ npm run dev
 ```bash
 npm run build
 ```
+ollama serve
+Run the backend tests from the backend directory:
 
-## Notes for demo and judge presentation
+```powershell
+cd backend
+..\.venv-1\Scripts\python.exe -m pytest -q
+```
 
-- The current version is a front-end demonstration of a preventive health tracking workflow.
+
+
+- The current version is a demonstration of a preventive health tracking workflow.
 - The model is intentionally explainable and lightweight rather than a deep clinical-grade medical AI.
 - It is best positioned as a demo concept for preventive monitoring, clinician support, and digital-twin style visualization.

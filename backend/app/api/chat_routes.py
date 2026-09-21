@@ -43,9 +43,19 @@ def chat_query(
             answer_args["behavior_context"] = payload.behavior_context.model_dump()
         result = service.answer(payload.query, **answer_args)
     except RagError as exc:
+        error_text = str(exc)
+        if "RESOURCE_EXHAUSTED" in error_text or "429" in error_text:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=(
+                    "The Gemini API quota has been exhausted. Wait before retrying "
+                    "or check the Gemini API rate limits and billing plan."
+                ),
+                headers={"Retry-After": "30"},
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"The RAG assistant failed to answer: {exc}",
+            detail=f"The RAG assistant failed to answer: {error_text}",
         ) from exc
 
     return ChatQueryResponse(
