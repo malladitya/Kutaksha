@@ -34,11 +34,22 @@ To enable it:
 
 ```bash
 cd backend
-pip install -r requirements-rag.txt      # langgraph, faiss, gemini, embeddings
-cp .env.example .env                     # then set GOOGLE_API_KEY
+	pip install -r requirements-rag.txt      # langgraph, faiss, Ollama/Gemini, embeddings
+	cp .env.example .env                     # configure LLM_PROVIDER
 mkdir -p docs                            # add the patient report PDFs here
 python -m uvicorn app.main:app --reload
 ```
+
+By default the assistant uses local Ollama, so it does not consume Gemini API
+quota. Install Ollama and download the configured model before starting the
+backend:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+Set `LLM_PROVIDER=gemini` and `GOOGLE_API_KEY` in `backend/.env` only when you
+want to use Gemini instead.
 
 Indexes are built on the first request (slow: it downloads the embedding model)
 and cached in `backend/rag_index/`. Delete that folder after changing the docs.

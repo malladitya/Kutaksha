@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from app.database import get_db
 from app.models import User
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
 
 SECRET_KEY = os.getenv("JWT_SECRET", "dev-secret-key")
 ALGORITHM = "HS256"

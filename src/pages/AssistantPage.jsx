@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { askRag, describeApiError } from '../utils/api';
 import { buildChatHistory } from '../utils/chat';
 import { getPatient, getPatientMetrics } from '../utils/storage';
 import { DEFAULT_BASELINE, hsiFromCurrent, normalizeMetrics, riskFromCurrent, severityFromCurrent } from '../utils/metrics';
+import { buildTrendData } from '../components/LiveCharts';
 
 const SUGGESTIONS = [
   'Summarise the latest medical report',
@@ -19,6 +20,25 @@ const INTENT_LABELS = {
   'general medical context': 'General context',
   'doctoral prescription and medical records': 'Records lookup',
 };
+
+function buildBehaviorContext(user) {
+  const patient = getPatient(user?.patientId || 'p1');
+  const baseline = normalizeMetrics(patient?.baseline, DEFAULT_BASELINE);
+  const history = getPatientMetrics(patient?.id || 'p1', 60);
+  const latest = history[history.length - 1] || baseline;
+
+  return {
+    patient_id: patient?.id || user?.patientId || 'p1',
+    patient_name: patient?.name || user?.name,
+    baseline,
+    latest,
+    history,
+    graph_trend: buildTrendData(history, baseline),
+    hsi: hsiFromCurrent(latest, baseline),
+    risk_score: riskFromCurrent(latest, baseline),
+    severity_score: severityFromCurrent(latest, baseline),
+  };
+}
 
 function Bubble({ message }) {
   if (message.role === 'user') {
@@ -63,23 +83,6 @@ function Bubble({ message }) {
 
 export default function AssistantPage({ onNavigate }) {
   const { user, isAuthenticated } = useAuth();
-  const behaviorContext = useMemo(() => {
-    const patient = getPatient(user?.patientId || 'p1');
-    const baseline = normalizeMetrics(patient?.baseline, DEFAULT_BASELINE);
-    const history = getPatientMetrics(patient?.id || 'p1', 60);
-    const latest = history[history.length - 1] || baseline;
-
-    return {
-      patient_id: patient?.id || user?.patientId || 'p1',
-      patient_name: patient?.name || user?.name,
-      baseline,
-      latest,
-      history,
-      hsi: hsiFromCurrent(latest, baseline),
-      risk_score: riskFromCurrent(latest, baseline),
-      severity_score: severityFromCurrent(latest, baseline),
-    };
-  }, [user]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,7 +102,9 @@ export default function AssistantPage({ onNavigate }) {
     setLoading(true);
 
     try {
-      const response = await askRag(query, history, { behaviorContext });
+      const response = await askRag(query, history, {
+        behaviorContext: buildBehaviorContext(user),
+      });
       setMessages((prev) => [
         ...prev,
         {

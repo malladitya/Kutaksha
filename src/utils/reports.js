@@ -21,6 +21,15 @@ export function generateReport(patient, current, baseline, history, alerts, gene
   report += `Condition: ${patient.condition}\n`;
   report += `Patient ID: ${patient.id}\n\n`;
 
+  report += '── PREVIOUS MEDICAL CONDITIONS ──────────────────────────\n';
+  if (!patient.previousMedicalConditions?.length) {
+    report += 'No previous medical conditions recorded.\n';
+  } else {
+    patient.previousMedicalConditions.forEach((item, index) => {
+      report += `${index + 1}. ${item.condition} (diagnosed ${item.diagnosed}) — ${item.status}\n`;
+    });
+  }
+
   report += '── HEALTH SUMMARY ───────────────────────────────────────\n';
   report += `Health Stability Index (HSI): ${hsi}/100\n`;
   report += `Risk Score: ${risk}%\n`;

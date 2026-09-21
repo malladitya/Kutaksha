@@ -123,6 +123,7 @@ class BehaviorContext(BaseModel):
     baseline: Dict[str, Any] = Field(default_factory=dict)
     latest: Dict[str, Any] = Field(default_factory=dict)
     history: List[Dict[str, Any]] = Field(default_factory=list, max_length=60)
+    graph_trend: List[Dict[str, Any]] = Field(default_factory=list, max_length=60)
     hsi: Optional[float] = None
     risk_score: Optional[float] = None
     severity_score: Optional[float] = None

@@ -33,6 +33,19 @@ app.include_router(demo_router, prefix="/api", tags=["demo"])
 app.include_router(chat_router, prefix="/chat", tags=["chat"])
 
 
+@app.on_event("startup")
+def warm_rag_service():
+    """Build the optional RAG service before the first chat request."""
+    try:
+        from app.ai.rag_graph import build_rag_service
+
+        build_rag_service()
+    except Exception:
+        # RAG remains optional; its route will report the precise unavailable
+        # reason if dependencies, documents, or Ollama are missing.
+        pass
+
+
 @app.exception_handler(RagUnavailable)
 async def rag_unavailable_handler(request: Request, exc: RagUnavailable):
     """The RAG stack is optional: report it as unavailable, not as a crash."""

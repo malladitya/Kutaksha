@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001';
 
 function buildHeaders(customHeaders = {}) {
   const token = localStorage.getItem('kutaksha_token');
@@ -49,6 +49,10 @@ export function describeApiError(error) {
 
   if (error.status === 401) {
     return 'Your session has expired. Please sign in again.';
+  }
+
+  if (error.status === 429) {
+    return 'The Gemini assistant quota is temporarily exhausted. Please wait and try again, or check the Gemini API quota and billing plan.';
   }
 
   try {
